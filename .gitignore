@@ -1,0 +1,21 @@
+# 環境変数・機密情報
+.env
+.env.local
+
+# macOS
+.DS_Store
+
+# エディタ
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# ローカルの一時ファイル
+*.tmp
+*.log

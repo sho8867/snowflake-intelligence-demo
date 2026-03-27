@@ -1,0 +1,379 @@
+name: demo_sales_model
+description: >
+  小売業向けデモ用セマンティックモデル。
+  売上（SALES）・商品（PRODUCTS）・キャンペーン（CAMPAIGNS）の3テーブルを対象とする。
+  Cortex Analyst が自然言語クエリを SQL に変換するためのメタデータ定義。
+
+tables:
+  # ============================================================
+  # 売上トランザクションテーブル
+  # ============================================================
+  - name: sales
+    description: 2024〜2025年の売上トランザクション。日次・商品・地域・店舗単位のデータ。
+    base_table:
+      database: DEMO_INTELLIGENCE_DB
+      schema: ANALYTICS
+      table: SALES
+    primary_key:
+      columns:
+        - sale_id
+
+    dimensions:
+      - name: sale_id
+        description: 売上トランザクションの一意識別子
+        expr: sale_id
+        data_type: VARCHAR
+        synonyms: ["取引ID", "売上ID", "transaction id", "order id"]
+
+      - name: sale_date
+        description: 売上が発生した日付
+        expr: sale_date
+        data_type: DATE
+        synonyms: ["売上日", "販売日", "購入日", "date", "sales date", "transaction date"]
+
+      - name: product_id
+        description: 商品ID（PRDUCTSテーブルと結合可能）
+        expr: product_id
+        data_type: VARCHAR
+        synonyms: ["商品ID", "product id", "item id"]
+
+      - name: product_name
+        description: 商品名
+        expr: product_name
+        data_type: VARCHAR
+        synonyms: ["商品名", "製品名", "アイテム名", "product name", "item name"]
+
+      - name: category
+        description: 商品の大カテゴリ（家電, 衣料品, 食品, スポーツ, 美容・健康）
+        expr: category
+        data_type: VARCHAR
+        synonyms: ["カテゴリ", "商品カテゴリ", "ジャンル", "部門", "category", "department", "product category"]
+        sample_values: ["家電", "衣料品", "食品", "スポーツ", "美容・健康"]
+
+      - name: subcategory
+        description: 商品のサブカテゴリ
+        expr: subcategory
+        data_type: VARCHAR
+        synonyms: ["サブカテゴリ", "小カテゴリ", "subcategory", "sub category"]
+
+      - name: region
+        description: 販売地域（関東, 関西, 東海, 九州, 東北, 北海道, 中国・四国）
+        expr: region
+        data_type: VARCHAR
+        synonyms: ["地域", "エリア", "販売地域", "都道府県", "region", "area", "location"]
+        sample_values: ["関東", "関西", "東海", "九州", "東北", "北海道", "中国・四国"]
+
+      - name: store_id
+        description: 店舗ID
+        expr: store_id
+        data_type: VARCHAR
+        synonyms: ["店舗ID", "店舗", "ストア", "store", "shop", "store id"]
+
+      - name: sale_month
+        description: 売上月（YYYY-MM 形式）
+        expr: TO_VARCHAR(sale_date, 'YYYY-MM')
+        data_type: VARCHAR
+        synonyms: ["月", "売上月", "月次", "month", "monthly"]
+
+      - name: sale_year
+        description: 売上年
+        expr: YEAR(sale_date)
+        data_type: NUMBER
+        synonyms: ["年", "売上年", "年次", "year", "annual"]
+
+      - name: sale_quarter
+        description: 売上四半期（Q1〜Q4）
+        expr: CONCAT('Q', QUARTER(sale_date))
+        data_type: VARCHAR
+        synonyms: ["四半期", "クォーター", "quarter"]
+
+    measures:
+      - name: units_sold
+        description: 販売数量（個）
+        expr: units_sold
+        data_type: NUMBER
+        synonyms: ["販売数", "個数", "数量", "販売量", "units", "quantity", "qty", "volume"]
+        default_aggregation: sum
+
+      - name: revenue
+        description: 売上金額（円）
+        expr: revenue
+        data_type: NUMBER
+        synonyms: ["売上", "売上高", "売上金額", "売り上げ", "収益", "revenue", "sales", "sales amount", "gross sales"]
+        default_aggregation: sum
+
+      - name: cost
+        description: 原価合計（円）
+        expr: cost
+        data_type: NUMBER
+        synonyms: ["原価", "コスト", "仕入れ原価", "cost", "cogs"]
+        default_aggregation: sum
+
+      - name: gross_profit
+        description: 粗利益（売上 - 原価）（円）
+        expr: revenue - cost
+        data_type: NUMBER
+        synonyms: ["粗利", "粗利益", "利益", "gross profit", "profit", "margin amount"]
+        default_aggregation: sum
+
+      - name: gross_margin_rate
+        description: 粗利率（粗利益 / 売上 × 100）（%）
+        expr: CASE WHEN revenue = 0 THEN 0 ELSE (revenue - cost) / revenue * 100 END
+        data_type: NUMBER
+        synonyms: ["粗利率", "利益率", "マージン率", "gross margin", "margin rate", "profit margin"]
+        default_aggregation: avg
+
+      - name: transaction_count
+        description: 取引件数
+        expr: COUNT(sale_id)
+        data_type: NUMBER
+        synonyms: ["取引件数", "注文件数", "件数", "transactions", "orders", "count"]
+        default_aggregation: count
+
+  # ============================================================
+  # 商品マスタテーブル
+  # ============================================================
+  - name: products
+    description: 商品マスタ。商品ID・名称・カテゴリ・価格情報を保持する。
+    base_table:
+      database: DEMO_INTELLIGENCE_DB
+      schema: ANALYTICS
+      table: PRODUCTS
+    primary_key:
+      columns:
+        - product_id
+
+    dimensions:
+      - name: product_id
+        description: 商品の一意識別子
+        expr: product_id
+        data_type: VARCHAR
+        synonyms: ["商品ID", "product id"]
+
+      - name: product_name
+        description: 商品名
+        expr: product_name
+        data_type: VARCHAR
+        synonyms: ["商品名", "製品名", "product name"]
+
+      - name: category
+        description: 商品カテゴリ
+        expr: category
+        data_type: VARCHAR
+        synonyms: ["カテゴリ", "商品カテゴリ", "ジャンル", "category"]
+        sample_values: ["家電", "衣料品", "食品", "スポーツ", "美容・健康"]
+
+      - name: subcategory
+        description: サブカテゴリ
+        expr: subcategory
+        data_type: VARCHAR
+        synonyms: ["サブカテゴリ", "小カテゴリ", "subcategory"]
+
+    measures:
+      - name: unit_price
+        description: 販売単価（円）
+        expr: unit_price
+        data_type: NUMBER
+        synonyms: ["単価", "価格", "販売価格", "定価", "unit price", "price"]
+        default_aggregation: avg
+
+      - name: cost_price
+        description: 原価（円）
+        expr: cost_price
+        data_type: NUMBER
+        synonyms: ["原価", "仕入れ価格", "cost price", "cost"]
+        default_aggregation: avg
+
+      - name: product_count
+        description: 商品数
+        expr: COUNT(product_id)
+        data_type: NUMBER
+        synonyms: ["商品数", "アイテム数", "product count", "item count"]
+        default_aggregation: count
+
+  # ============================================================
+  # キャンペーンテーブル
+  # ============================================================
+  - name: campaigns
+    description: マーケティングキャンペーンの実績データ。予算・インプレッション・クリック・コンバージョンを含む。
+    base_table:
+      database: DEMO_INTELLIGENCE_DB
+      schema: ANALYTICS
+      table: CAMPAIGNS
+    primary_key:
+      columns:
+        - campaign_id
+
+    dimensions:
+      - name: campaign_id
+        description: キャンペーンID
+        expr: campaign_id
+        data_type: VARCHAR
+        synonyms: ["キャンペーンID", "campaign id"]
+
+      - name: campaign_name
+        description: キャンペーン名
+        expr: campaign_name
+        data_type: VARCHAR
+        synonyms: ["キャンペーン名", "施策名", "campaign name"]
+
+      - name: category
+        description: 対象商品カテゴリ
+        expr: category
+        data_type: VARCHAR
+        synonyms: ["カテゴリ", "対象カテゴリ", "category"]
+
+      - name: channel
+        description: マーケティングチャネル（SNS広告, メールマーケティング, テレビCM 等）
+        expr: channel
+        data_type: VARCHAR
+        synonyms: ["チャネル", "媒体", "広告媒体", "channel", "media", "platform"]
+        sample_values: ["SNS広告", "メールマーケティング", "テレビCM", "雑誌広告", "検索広告", "店頭プロモーション"]
+
+      - name: start_date
+        description: キャンペーン開始日
+        expr: start_date
+        data_type: DATE
+        synonyms: ["開始日", "start date"]
+
+      - name: end_date
+        description: キャンペーン終了日
+        expr: end_date
+        data_type: DATE
+        synonyms: ["終了日", "end date"]
+
+    measures:
+      - name: budget
+        description: キャンペーン予算（円）
+        expr: budget
+        data_type: NUMBER
+        synonyms: ["予算", "広告予算", "budget", "advertising budget"]
+        default_aggregation: sum
+
+      - name: actual_spend
+        description: 実績費用（円）
+        expr: actual_spend
+        data_type: NUMBER
+        synonyms: ["実績費用", "実費", "消化金額", "spend", "actual spend", "actual cost"]
+        default_aggregation: sum
+
+      - name: impressions
+        description: インプレッション数（広告表示回数）
+        expr: impressions
+        data_type: NUMBER
+        synonyms: ["インプレッション", "表示回数", "impressions", "views"]
+        default_aggregation: sum
+
+      - name: clicks
+        description: クリック数
+        expr: clicks
+        data_type: NUMBER
+        synonyms: ["クリック", "クリック数", "clicks"]
+        default_aggregation: sum
+
+      - name: conversions
+        description: コンバージョン数（購買等）
+        expr: conversions
+        data_type: NUMBER
+        synonyms: ["コンバージョン", "成約数", "購買数", "conversions", "cvr count"]
+        default_aggregation: sum
+
+      - name: ctr
+        description: クリック率（clicks / impressions × 100）（%）
+        expr: CASE WHEN impressions = 0 THEN 0 ELSE clicks::FLOAT / impressions * 100 END
+        data_type: NUMBER
+        synonyms: ["CTR", "クリック率", "click rate", "click through rate"]
+        default_aggregation: avg
+
+      - name: cvr
+        description: コンバージョン率（conversions / clicks × 100）（%）
+        expr: CASE WHEN clicks = 0 THEN 0 ELSE conversions::FLOAT / clicks * 100 END
+        data_type: NUMBER
+        synonyms: ["CVR", "コンバージョン率", "conversion rate"]
+        default_aggregation: avg
+
+      - name: cpa
+        description: 顧客獲得単価（actual_spend / conversions）（円）
+        expr: CASE WHEN conversions = 0 THEN NULL ELSE actual_spend / conversions END
+        data_type: NUMBER
+        synonyms: ["CPA", "獲得単価", "顧客獲得コスト", "cost per acquisition", "cost per conversion"]
+        default_aggregation: avg
+
+# ============================================================
+# テーブル間のリレーションシップ
+# ============================================================
+relationships:
+  - name: sales_to_products
+    left_table: sales
+    right_table: products
+    relationship_type: many_to_one
+    join_type: left_outer
+    relationship_columns:
+      - left_column: product_id
+        right_column: product_id
+
+# ============================================================
+# 検証済みクエリ（Cortex Analyst の回答精度向上）
+# ============================================================
+verified_queries:
+  - name: monthly_revenue_2024
+    question: "2024年の月別売上合計を教えてください"
+    sql: >
+      SELECT
+        TO_VARCHAR(sale_date, 'YYYY-MM') AS sale_month,
+        SUM(revenue)                     AS total_revenue
+      FROM DEMO_INTELLIGENCE_DB.ANALYTICS.SALES
+      WHERE YEAR(sale_date) = 2024
+      GROUP BY 1
+      ORDER BY 1
+
+  - name: top10_products_by_revenue
+    question: "売上金額トップ10の商品は何ですか？"
+    sql: >
+      SELECT
+        product_name,
+        category,
+        SUM(revenue)     AS total_revenue,
+        SUM(units_sold)  AS total_units
+      FROM DEMO_INTELLIGENCE_DB.ANALYTICS.SALES
+      GROUP BY product_name, category
+      ORDER BY total_revenue DESC
+      LIMIT 10
+
+  - name: revenue_by_category_and_region
+    question: "カテゴリ・地域別の売上を見せてください"
+    sql: >
+      SELECT
+        category,
+        region,
+        SUM(revenue)    AS total_revenue,
+        SUM(units_sold) AS total_units
+      FROM DEMO_INTELLIGENCE_DB.ANALYTICS.SALES
+      GROUP BY category, region
+      ORDER BY category, total_revenue DESC
+
+  - name: gross_profit_by_category
+    question: "カテゴリ別の粗利益と粗利率を教えてください"
+    sql: >
+      SELECT
+        category,
+        SUM(revenue)                                         AS total_revenue,
+        SUM(revenue - cost)                                  AS total_gross_profit,
+        ROUND(SUM(revenue - cost) / SUM(revenue) * 100, 1)  AS gross_margin_pct
+      FROM DEMO_INTELLIGENCE_DB.ANALYTICS.SALES
+      GROUP BY category
+      ORDER BY total_gross_profit DESC
+
+  - name: campaign_roi_by_channel
+    question: "チャネル別のキャンペーンCTRとCVRを教えてください"
+    sql: >
+      SELECT
+        channel,
+        COUNT(*)                                                               AS campaign_count,
+        SUM(actual_spend)                                                      AS total_spend,
+        ROUND(SUM(clicks)::FLOAT       / NULLIF(SUM(impressions), 0) * 100, 2) AS avg_ctr_pct,
+        ROUND(SUM(conversions)::FLOAT  / NULLIF(SUM(clicks), 0)      * 100, 2) AS avg_cvr_pct,
+        ROUND(SUM(actual_spend)        / NULLIF(SUM(conversions), 0), 0)       AS avg_cpa
+      FROM DEMO_INTELLIGENCE_DB.ANALYTICS.CAMPAIGNS
+      GROUP BY channel
+      ORDER BY avg_cvr_pct DESC
