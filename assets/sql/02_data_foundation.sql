@@ -67,48 +67,45 @@ CREATE OR REPLACE TABLE SUPPORT_CASES (
 );
 
 -- =====================================================
--- Git リポジトリ内 CSV からデータロード
+-- Git リポジトリ → 内部ステージ → テーブルへロード
+-- （Git Repository から COPY INTO は非サポートのため
+--   一度内部ステージへ COPY FILES してから COPY INTO する）
 -- =====================================================
 
-COPY INTO PRODUCTS
-FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/products.csv
-FILE_FORMAT = (
-    TYPE                        = 'CSV'
-    SKIP_HEADER                 = 1
+-- CSV 格納用の内部ステージを作成
+CREATE STAGE IF NOT EXISTS DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA
+    COMMENT = 'CSV ロード用一時ステージ';
+
+-- Git リポジトリから内部ステージへ CSV をコピー
+COPY FILES
+    INTO @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA
+    FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/
+    PATTERN = '.*\.csv';
+
+-- ファイルフォーマット定義
+CREATE OR REPLACE FILE FORMAT DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT
+    TYPE                         = 'CSV'
+    SKIP_HEADER                  = 1
     FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    NULL_IF                     = ('NULL', 'null', '')
-    ENCODING                    = 'UTF-8'
-);
+    NULL_IF                      = ('NULL', 'null', '')
+    ENCODING                     = 'UTF-8';
+
+-- 内部ステージからテーブルへロード
+COPY INTO PRODUCTS
+FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/products.csv
+FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
 
 COPY INTO SALES
-FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/sales.csv
-FILE_FORMAT = (
-    TYPE                        = 'CSV'
-    SKIP_HEADER                 = 1
-    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    NULL_IF                     = ('NULL', 'null', '')
-    ENCODING                    = 'UTF-8'
-);
+FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/sales.csv
+FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
 
 COPY INTO CAMPAIGNS
-FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/campaigns.csv
-FILE_FORMAT = (
-    TYPE                        = 'CSV'
-    SKIP_HEADER                 = 1
-    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    NULL_IF                     = ('NULL', 'null', '')
-    ENCODING                    = 'UTF-8'
-);
+FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/campaigns.csv
+FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
 
 COPY INTO SUPPORT_CASES
-FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/support_cases.csv
-FILE_FORMAT = (
-    TYPE                        = 'CSV'
-    SKIP_HEADER                 = 1
-    FIELD_OPTIONALLY_ENCLOSED_BY = '"'
-    NULL_IF                     = ('NULL', 'null', '')
-    ENCODING                    = 'UTF-8'
-);
+FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/support_cases.csv
+FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
 
 -- ロード結果確認
 SELECT 'PRODUCTS'     AS table_name, COUNT(*) AS row_count FROM PRODUCTS     UNION ALL
