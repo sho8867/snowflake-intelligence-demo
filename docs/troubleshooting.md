@@ -52,11 +52,21 @@ Cortex functions are not available in this region.
 **原因**: Cortex AI が利用できないリージョン。
 
 **対処**: 以下のリージョンで再作成してください（2025年3月時点）:
-- AWS: us-east-1, us-west-2, eu-west-1
-- Azure: eastus2, westeurope
-- GCP: us-central1
 
-最新のサポートリージョンは [Snowflake ドキュメント](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#availability) を確認してください。
+| クラウド | 推奨リージョン | LLM Functions | Cortex Search | Cortex Analyst | Cortex Agents |
+|---------|-------------|:---:|:---:|:---:|:---:|
+| **AWS** | **東京 (ap-northeast-1)** | ✅ | ✅ | ✅ | ✅ |
+| AWS | バージニア (us-east-1) | ✅ | ✅ | ✅ | ✅ |
+| AWS | オレゴン (us-west-2) | ✅ | ✅ | ✅ | ✅ |
+| AWS | フランクフルト (eu-central-1) | ✅ | ✅ | ✅ | ✅ |
+| Azure | 東京 (Japan East) | ✅ | ✅ | — | — |
+| Azure | バージニア (East US 2) | ✅ | ✅ | ✅ | ✅ |
+| GCP | アイオワ (us-central1) | — | ✅ | — | — |
+
+**日本からのデモには AWS 東京（ap-northeast-1）が全機能対応で最も推奨です。**
+
+> クロスリージョン推論を有効にすると、ネイティブ非対応リージョンでも一部機能が利用できる場合があります。
+> 最新情報は [Snowflake ドキュメント](https://docs.snowflake.com/en/user-guide/snowflake-cortex/llm-functions#availability) を確認してください。
 
 ---
 
