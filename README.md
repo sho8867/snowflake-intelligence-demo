@@ -129,7 +129,15 @@ EXECUTE IMMEDIATE FROM
 3. **説明**: 「小売デモ用エージェント。売上・商品・キャンペーン・サポートに関する質問に自然言語で答えます。」
 4. **Tools > Cortex Analyst** を追加し、セマンティックモデルに
    `@DEMO_INTELLIGENCE_DB.ANALYTICS.SEMANTIC_MODELS/demo_sales_model.yaml` を指定
-5. **Tools > Cortex Search** を追加し、`DEMO_INTELLIGENCE_DB.ANALYTICS.SUPPORT_SEARCH` を指定
+5. **Tools > Cortex Search** を追加し、以下の設定を行う:
+
+   | 項目 | 設定値 | 説明 |
+   |------|--------|------|
+   | サービス | `DEMO_INTELLIGENCE_DB.ANALYTICS.SUPPORT_SEARCH` | 作成済みの Cortex Search サービス |
+   | 最大結果 | `5` | 1クエリで返す検索結果の最大件数。多すぎると回答が冗長になるため 3〜5 が適切 |
+   | ID列 | `CASE_ID` | 各レコードを一意に識別する列（主キー） |
+   | タイトル列 | `CATEGORY` | 検索結果の見出しとして表示される列。`CASE_ID` より内容が分かりやすい |
+
 6. **Example questions** に以下を追加:
    - 先月の売上合計はいくらですか？
    - カテゴリ別の売上ランキングを教えてください
