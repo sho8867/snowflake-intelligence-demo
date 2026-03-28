@@ -1,6 +1,6 @@
 -- =====================================================
--- Step 2: データ基盤構築
--- テーブル作成 + Git リポジトリ内 CSV からデータロード
+-- Step 2: Data foundation
+-- Create tables and load CSV data from Git repository
 -- =====================================================
 
 USE ROLE      DEMO_INTELLIGENCE_ADMIN;
@@ -9,80 +9,79 @@ USE DATABASE  DEMO_INTELLIGENCE_DB;
 USE SCHEMA    ANALYTICS;
 
 -- =====================================================
--- テーブル定義
+-- Table definitions
 -- =====================================================
 
--- 商品マスタ
+-- Product master
 CREATE OR REPLACE TABLE PRODUCTS (
-    product_id    VARCHAR(20)    NOT NULL COMMENT '商品ID',
-    product_name  VARCHAR(100)   NOT NULL COMMENT '商品名',
-    category      VARCHAR(50)    NOT NULL COMMENT '大カテゴリ（家電, 衣料品, 食品, スポーツ, 美容・健康）',
-    subcategory   VARCHAR(50)    COMMENT 'サブカテゴリ',
-    unit_price    NUMBER(10, 2)  NOT NULL COMMENT '販売単価（円）',
-    cost_price    NUMBER(10, 2)  NOT NULL COMMENT '原価（円）',
+    product_id    VARCHAR(20)   NOT NULL,
+    product_name  VARCHAR(100)  NOT NULL,
+    category      VARCHAR(50)   NOT NULL,
+    subcategory   VARCHAR(50),
+    unit_price    NUMBER(10, 2) NOT NULL,
+    cost_price    NUMBER(10, 2) NOT NULL,
     PRIMARY KEY (product_id)
 );
 
--- 売上トランザクション
+-- Sales transactions
 CREATE OR REPLACE TABLE SALES (
-    sale_id      VARCHAR(20)    NOT NULL COMMENT '売上ID',
-    sale_date    DATE           NOT NULL COMMENT '売上日',
-    product_id   VARCHAR(20)    NOT NULL COMMENT '商品ID',
-    product_name VARCHAR(100)   COMMENT '商品名',
-    category     VARCHAR(50)    COMMENT '大カテゴリ',
-    subcategory  VARCHAR(50)    COMMENT 'サブカテゴリ',
-    region       VARCHAR(50)    COMMENT '地域（関東, 関西, 東海 等）',
-    store_id     VARCHAR(20)    COMMENT '店舗ID',
-    units_sold   NUMBER(10)     NOT NULL COMMENT '販売数量',
-    revenue      NUMBER(12, 2)  NOT NULL COMMENT '売上金額（円）',
-    cost         NUMBER(12, 2)  COMMENT '原価合計（円）',
+    sale_id      VARCHAR(20)   NOT NULL,
+    sale_date    DATE          NOT NULL,
+    product_id   VARCHAR(20)   NOT NULL,
+    product_name VARCHAR(100),
+    category     VARCHAR(50),
+    subcategory  VARCHAR(50),
+    region       VARCHAR(50),
+    store_id     VARCHAR(20),
+    units_sold   NUMBER(10)    NOT NULL,
+    revenue      NUMBER(12, 2) NOT NULL,
+    cost         NUMBER(12, 2),
     PRIMARY KEY (sale_id)
 );
 
--- マーケティングキャンペーン
+-- Marketing campaigns
 CREATE OR REPLACE TABLE CAMPAIGNS (
-    campaign_id   VARCHAR(20)    NOT NULL COMMENT 'キャンペーンID',
-    campaign_name VARCHAR(100)   NOT NULL COMMENT 'キャンペーン名',
-    category      VARCHAR(50)    COMMENT '対象カテゴリ',
-    channel       VARCHAR(50)    COMMENT 'チャネル（SNS広告, メールマーケティング 等）',
-    start_date    DATE           COMMENT '開始日',
-    end_date      DATE           COMMENT '終了日',
-    budget        NUMBER(12, 2)  COMMENT '予算（円）',
-    actual_spend  NUMBER(12, 2)  COMMENT '実績費用（円）',
-    impressions   NUMBER(12)     COMMENT 'インプレッション数',
-    clicks        NUMBER(10)     COMMENT 'クリック数',
-    conversions   NUMBER(10)     COMMENT 'コンバージョン数',
+    campaign_id   VARCHAR(20)   NOT NULL,
+    campaign_name VARCHAR(100)  NOT NULL,
+    category      VARCHAR(50),
+    channel       VARCHAR(50),
+    start_date    DATE,
+    end_date      DATE,
+    budget        NUMBER(12, 2),
+    actual_spend  NUMBER(12, 2),
+    impressions   NUMBER(12),
+    clicks        NUMBER(10),
+    conversions   NUMBER(10),
     PRIMARY KEY (campaign_id)
 );
 
--- サポートケース（Cortex Search 用）
+-- Support cases (for Cortex Search)
 CREATE OR REPLACE TABLE SUPPORT_CASES (
-    case_id           VARCHAR(20)   NOT NULL COMMENT 'ケースID',
-    created_date      DATE          NOT NULL COMMENT '受付日',
-    category          VARCHAR(50)   COMMENT '商品カテゴリ',
-    priority          VARCHAR(10)   COMMENT '優先度（高, 中, 低）',
-    transcript        TEXT          COMMENT 'お問い合わせ内容・対応記録',
-    resolution_status VARCHAR(20)   COMMENT '解決ステータス（解決済み, 対応中, 未対応）',
+    case_id           VARCHAR(20)  NOT NULL,
+    created_date      DATE         NOT NULL,
+    category          VARCHAR(50),
+    priority          VARCHAR(10),
+    transcript        TEXT,
+    resolution_status VARCHAR(20),
     PRIMARY KEY (case_id)
 );
 
 -- =====================================================
--- Git リポジトリ → 内部ステージ → テーブルへロード
--- （Git Repository から COPY INTO は非サポートのため
---   一度内部ステージへ COPY FILES してから COPY INTO する）
+-- Load data: Git repo -> internal stage -> tables
+-- (COPY INTO from Git Repository is not supported;
+--  use COPY FILES to an internal stage first)
 -- =====================================================
 
--- CSV 格納用の内部ステージを作成
-CREATE STAGE IF NOT EXISTS DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA
-    COMMENT = 'CSV ロード用一時ステージ';
+-- Internal stage for raw CSV files
+CREATE STAGE IF NOT EXISTS DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA;
 
--- Git リポジトリから内部ステージへ CSV をコピー
+-- Copy CSV files from Git repository to internal stage
 COPY FILES
     INTO @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA
     FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/data/
     PATTERN = '.*\.csv';
 
--- ファイルフォーマット定義
+-- File format
 CREATE OR REPLACE FILE FORMAT DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT
     TYPE                         = 'CSV'
     SKIP_HEADER                  = 1
@@ -90,7 +89,7 @@ CREATE OR REPLACE FILE FORMAT DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT
     NULL_IF                      = ('NULL', 'null', '')
     ENCODING                     = 'UTF-8';
 
--- 内部ステージからテーブルへロード
+-- Load tables from internal stage
 COPY INTO PRODUCTS
 FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/products.csv
 FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
@@ -107,10 +106,10 @@ COPY INTO SUPPORT_CASES
 FROM @DEMO_INTELLIGENCE_DB.ANALYTICS.RAW_DATA/support_cases.csv
 FILE_FORMAT = (FORMAT_NAME = 'DEMO_INTELLIGENCE_DB.ANALYTICS.CSV_FORMAT');
 
--- ロード結果確認
-SELECT 'PRODUCTS'     AS table_name, COUNT(*) AS row_count FROM PRODUCTS     UNION ALL
-SELECT 'SALES'        AS table_name, COUNT(*) AS row_count FROM SALES         UNION ALL
-SELECT 'CAMPAIGNS'    AS table_name, COUNT(*) AS row_count FROM CAMPAIGNS     UNION ALL
-SELECT 'SUPPORT_CASES'AS table_name, COUNT(*) AS row_count FROM SUPPORT_CASES;
+-- Row count verification
+SELECT 'PRODUCTS'      AS table_name, COUNT(*) AS row_count FROM PRODUCTS      UNION ALL
+SELECT 'SALES'         AS table_name, COUNT(*) AS row_count FROM SALES          UNION ALL
+SELECT 'CAMPAIGNS'     AS table_name, COUNT(*) AS row_count FROM CAMPAIGNS      UNION ALL
+SELECT 'SUPPORT_CASES' AS table_name, COUNT(*) AS row_count FROM SUPPORT_CASES;
 
-SELECT '02_data_foundation: 完了' AS status;
+SELECT '02_data_foundation: done' AS status;

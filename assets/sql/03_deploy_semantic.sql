@@ -1,6 +1,6 @@
 -- =====================================================
--- Step 3: セマンティックモデルのデプロイ
--- YAML ファイルを内部ステージへコピーして Cortex Analyst に登録
+-- Step 3: Deploy semantic model
+-- Copy YAML from Git repository to internal stage for Cortex Analyst
 -- =====================================================
 
 USE ROLE      DEMO_INTELLIGENCE_ADMIN;
@@ -8,22 +8,21 @@ USE WAREHOUSE DEMO_INTELLIGENCE_WH;
 USE DATABASE  DEMO_INTELLIGENCE_DB;
 USE SCHEMA    ANALYTICS;
 
--- セマンティックモデル用ステージを作成
+-- Stage for semantic model YAML files
 CREATE STAGE IF NOT EXISTS DEMO_INTELLIGENCE_DB.ANALYTICS.SEMANTIC_MODELS
-    DIRECTORY = (ENABLE = TRUE)
-    COMMENT   = 'Cortex Analyst セマンティックモデル格納用ステージ';
+    DIRECTORY = (ENABLE = TRUE);
 
--- Git リポジトリ内の YAML を内部ステージへコピー
+-- Copy YAML from Git repository to internal stage
 COPY FILES
     INTO @DEMO_INTELLIGENCE_DB.ANALYTICS.SEMANTIC_MODELS
     FROM @SNOWFLAKE_QUICKSTART_REPOS.GIT_REPOS.DEMO_REPO/branches/main/assets/semantic_models/
     PATTERN = '.*\.yaml';
 
--- DIRECTORY メタデータを更新（COPY FILES 直後は反映されないため必須）
+-- Refresh directory metadata (required after COPY FILES)
 ALTER STAGE DEMO_INTELLIGENCE_DB.ANALYTICS.SEMANTIC_MODELS REFRESH;
 
--- ステージ内容を確認
+-- Verify
 SELECT relative_path, size, last_modified
 FROM DIRECTORY(@DEMO_INTELLIGENCE_DB.ANALYTICS.SEMANTIC_MODELS);
 
-SELECT '03_deploy_semantic: 完了' AS status;
+SELECT '03_deploy_semantic: done' AS status;
